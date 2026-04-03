@@ -1,0 +1,4 @@
+data/preprocessed/*.pkl
+.ipynb_checkpoints/
+__pycache__/
+.venv/
