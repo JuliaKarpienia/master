@@ -202,15 +202,30 @@ with st.sidebar:
 
     customer_mode = st.radio(
         "Customer type",
-        ["B2B – Known Contractor", "B2C – Anonymous Walk-in"],
-        help="B2B customers get Collaborative Filtering on top of association rules.",
+        ["B2B – Known Contractor", "B2C – Anonymous Walk-in", "New Customer"],
+        help=(
+            "B2B: existing contractor with purchase history.  \n"
+            "B2C: anonymous POS walk-in.  \n"
+            "New Customer: first-time visitor — gets best-seller / cross-sell recommendations."
+        ),
     )
 
-    if customer_mode.startswith(""):
+    if customer_mode == "B2B – Known Contractor":
         customer_name = st.selectbox(
             "Select customer",
             known_customers,
             help="Contractors recorded in the RFM database.",
+        )
+    elif customer_mode == "New Customer":
+        typed_name = st.text_input(
+            "Customer name (optional)",
+            placeholder="e.g. Firma Budowlana XYZ",
+            help="Enter any name or leave blank. No purchase history exists yet.",
+        )
+        customer_name = typed_name.strip() if typed_name.strip() else "NEW_CUSTOMER"
+        st.info(
+            "No purchase history available for this customer.  \n"
+            "Recommendations are based on **cross-selling rules** and **store best-sellers**."
         )
     else:
         customer_name = "SPRZEDAZ FISKALNA"
@@ -255,11 +270,14 @@ results = get_hybrid_recommendations(
 )
 
 is_b2b = results["Type"].startswith("B2B")
+is_new = customer_mode == "New Customer"
 
 # ── Customer header ────────────────────────────────────────────────────────────
 st.divider()
 col_name, col_type, col_size = st.columns([4, 2, 1])
-# col_name.subheade(f"{'🏢' if is_b2b else '🛒'} {customer_name}")
+icon = "🏢" if is_b2b else ("🆕" if is_new else "🛒")
+display_name = customer_name if customer_name != "NEW_CUSTOMER" else "New Customer"
+col_name.subheader(f"{icon} {display_name}")
 col_type.markdown(f"**Type:** {results['Type']}")
 col_size.metric("Basket items", len(basket))
 
