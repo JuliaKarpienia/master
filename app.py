@@ -216,6 +216,16 @@ with st.sidebar:
             known_customers,
             help="Contractors recorded in the RFM database.",
         )
+        st.info(
+            "**How recommendations are made:**  \n"
+            "1. **Cross-selling (Association Rules)** — products that contractors "
+            "frequently buy *together* with items already in the basket, mined from B2B invoices.  \n"
+            "2. **Similar contractors (Collaborative Filtering)** — products bought by "
+            "other contractors with a similar purchase history, calculated using cosine similarity.  \n"
+            "3. **RFM profile** — the customer's Recency, Frequency and lifetime Monetary "
+            "value are shown so the manager can tailor the conversation.  \n"
+            "Popularity best-sellers are used only as a last resort if neither signal fires."
+        )
     elif customer_mode == "New Customer":
         typed_name = st.text_input(
             "Customer name (optional)",
@@ -224,12 +234,22 @@ with st.sidebar:
         )
         customer_name = typed_name.strip() if typed_name.strip() else "NEW_CUSTOMER"
         st.info(
-            "No purchase history available for this customer.  \n"
-            "Recommendations are based on **cross-selling rules** and **store best-sellers**."
+            "**How recommendations are made:**  \n"
+            "No purchase history exists for this customer yet.  \n"
+            "Recommendations are based on **B2C cross-selling rules** (products "
+            "anonymous walk-ins commonly buy together) and **store best-sellers** as a fallback."
         )
     else:
         customer_name = "SPRZEDAZ FISKALNA"
-        st.info("Anonymous POS transaction — using B2C rules only.")
+        st.info(
+            "**How recommendations are made:**  \n"
+            "Anonymous cash-register transactions are grouped under a single POS entry, "
+            "so no individual purchase history is available.  \n"
+            "1. **Cross-selling (B2C Association Rules)** — products that walk-in "
+            "customers frequently buy together in the same basket.  \n"
+            "2. **Store best-sellers** — most purchased products overall, used as a "
+            "fallback when no basket-specific rules fire."
+        )
 
     st.divider()
     st.subheader("Current basket")
@@ -275,9 +295,8 @@ is_new = customer_mode == "New Customer"
 # ── Customer header ────────────────────────────────────────────────────────────
 st.divider()
 col_name, col_type, col_size = st.columns([4, 2, 1])
-icon = "🏢" if is_b2b else ("🆕" if is_new else "🛒")
 display_name = customer_name if customer_name != "NEW_CUSTOMER" else "New Customer"
-col_name.subheader(f"{icon} {display_name}")
+col_name.subheader(display_name)
 col_type.markdown(f"**Type:** {results['Type']}")
 col_size.metric("Basket items", len(basket))
 
@@ -369,12 +388,12 @@ with st.expander("View raw LLM prompt (for debugging)"):
     st.code(prompt, language="text")
 
 if key_to_use:
-    if st.button("✨ Generate explanation", type="primary"):
+    if st.button("Generate explanation", type="primary"):
         with st.spinner("Calling GPT-4o-mini…"):
             explanation = call_llm(prompt, key_to_use)
         st.success(explanation)
 else:
     st.info(
-        "Enter an OpenAI API key in **⚙️ LLM settings** (sidebar) to generate "
+        "Enter an OpenAI API key in **LLM settings** (sidebar) to generate "
         "a plain-English recommendation summary for the floor manager."
     )
