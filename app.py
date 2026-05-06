@@ -196,17 +196,17 @@ known_customers = sorted(rfm.index.tolist())
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.title("🎨 Retail Recommender")
+    st.title("Retail Recommender")
     st.caption("Paint & hardware store · hybrid engine")
     st.divider()
 
     customer_mode = st.radio(
         "Customer type",
-        ["🏢  B2B – Known Contractor", "🛒  B2C – Anonymous Walk-in"],
+        ["B2B – Known Contractor", "B2C – Anonymous Walk-in"],
         help="B2B customers get Collaborative Filtering on top of association rules.",
     )
 
-    if customer_mode.startswith("🏢"):
+    if customer_mode.startswith(""):
         customer_name = st.selectbox(
             "Select customer",
             known_customers,
@@ -226,7 +226,7 @@ with st.sidebar:
     )
 
     st.divider()
-    with st.expander("⚙️ LLM settings (optional)"):
+    with st.expander("LLM settings (optional)"):
         openai_key = st.text_input(
             "OpenAI API key",
             type="password",
@@ -237,7 +237,6 @@ with st.sidebar:
         st.warning(
             "Item similarity matrix not found.  \nRun **notebook 2** to generate it.  \n"
             "CF recommendations will be skipped.",
-            icon="⚠️",
         )
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -247,7 +246,7 @@ st.caption(
 )
 
 if not basket:
-    st.info("👈 Add products to the basket in the sidebar to see recommendations.")
+    st.info("Add products to the basket in the sidebar to see recommendations.")
     st.stop()
 
 # Run engine
@@ -260,7 +259,7 @@ is_b2b = results["Type"].startswith("B2B")
 # ── Customer header ────────────────────────────────────────────────────────────
 st.divider()
 col_name, col_type, col_size = st.columns([4, 2, 1])
-col_name.subheader(f"{'🏢' if is_b2b else '🛒'} {customer_name}")
+# col_name.subheade(f"{'🏢' if is_b2b else '🛒'} {customer_name}")
 col_type.markdown(f"**Type:** {results['Type']}")
 col_size.metric("Basket items", len(basket))
 
@@ -275,7 +274,7 @@ if is_b2b and results["RFM_Profile"]:
 
 # ── Recommendation tabs ────────────────────────────────────────────────────────
 st.divider()
-st.subheader("📦 Recommendations")
+st.subheader("Recommendations")
 
 has_ar = bool(results["AR_Recs"])
 has_cf = bool(results["CF_Recs"])
@@ -283,11 +282,11 @@ has_pop = bool(results["Popularity_Fallback"])
 
 tab_labels = []
 if has_ar:
-    tab_labels.append("🔗 Market Basket")
+    tab_labels.append("Market Basket")
 if has_cf:
-    tab_labels.append("👥 Similar Contractors")
+    tab_labels.append("Similar Contractors")
 if has_pop:
-    tab_labels.append("⭐ Store Best-Sellers")
+    tab_labels.append("Store Best-Sellers")
 
 if not tab_labels:
     st.warning("No recommendations could be generated for this basket.")
@@ -343,7 +342,7 @@ else:
 
 # ── LLM Manager Summary ────────────────────────────────────────────────────────
 st.divider()
-st.subheader("🤖 AI Manager Summary")
+st.subheader("AI Manager Summary")
 
 key_to_use = openai_key or os.environ.get("OPENAI_API_KEY", "")
 prompt = generate_llm_prompt(results)
