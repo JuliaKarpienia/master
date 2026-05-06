@@ -39,16 +39,46 @@ def load_data():
         .sort_values("PurchaseFrequency", ascending=False)
     )
 
-    return df, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity
+    # Product-level profit scores (avg margin normalised to [0, 1])
+    profit_path = os.path.join(DATA_DIR, "product_profit_scores.csv")
+    if os.path.exists(profit_path):
+        _profit_df = pd.read_csv(profit_path)
+    else:
+        # Fallback: compute on the fly
+        _profit_df = df.groupby("ProductName")["Margin"].mean().reset_index()
+        _profit_df.columns = ["ProductName", "AvgMargin"]
+        lo, hi = _profit_df["AvgMargin"].min(), _profit_df["AvgMargin"].max()
+        _profit_df["ProfitScore"] = ((_profit_df["AvgMargin"] - lo) / (hi - lo)).clip(0, 1)
+    profit_scores = _profit_df.set_index("ProductName")["ProfitScore"].to_dict()
+
+    return df, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity, profit_scores
+
+
+# ── Profit re-ranking helper ──────────────────────────────────────────────────
+def _profit_rerank(candidates, relevance_key, profit_scores, profit_weight=0.3):
+    """Blend normalised relevance with normalised profit score."""
+    if not candidates:
+        return candidates
+    raw = [c[relevance_key] for c in candidates]
+    lo, hi = min(raw), max(raw)
+    denom = (hi - lo) if hi > lo else 1.0
+    for c in candidates:
+        norm_rel = (c[relevance_key] - lo) / denom
+        p = profit_scores.get(c["Item"], 0.0)
+        c["ProfitScore"] = round(p, 3)
+        c["BlendedScore"] = round((1 - profit_weight) * norm_rel + profit_weight * p, 3)
+    return sorted(candidates, key=lambda x: x["BlendedScore"], reverse=True)
 
 
 # ── Recommendation engine ──────────────────────────────────────────────────────
 def get_hybrid_recommendations(
-    customer_name, current_basket, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity
+    customer_name, current_basket, rfm, b2b_rules, b2c_rules, item_similarity_df,
+    popularity, profit_scores, profit_weight=0.3
 ):
     """
     Hybrid engine: CF (B2B only) + Association Rules + Popularity fallback.
     Mirrors the logic from '3. Final Model.ipynb'.
+    Candidates are re-ranked by a blend of relevance and product profitability.
     """
     is_b2c = customer_name == "SPRZEDAZ FISKALNA" or customer_name not in rfm.index
 
@@ -86,8 +116,8 @@ def get_hybrid_recommendations(
                                 "Score": round(score, 2),
                                 "Based_On": item,
                             }
-        recommendations["CF_Recs"] = sorted(
-            cf_candidates.values(), key=lambda x: x["Score"], reverse=True
+        recommendations["CF_Recs"] = _profit_rerank(
+            list(cf_candidates.values()), "Score", profit_scores, profit_weight
         )[:3]
 
     # B. Association Rules
@@ -105,14 +135,21 @@ def get_hybrid_recommendations(
                         "Confidence": round(row["confidence"], 2),
                         "Based_On": item,
                     }
-        recommendations["AR_Recs"] = sorted(
-            ar_candidates.values(), key=lambda x: x["Lift"], reverse=True
+        recommendations["AR_Recs"] = _profit_rerank(
+            list(ar_candidates.values()), "Lift", profit_scores, profit_weight
         )[:3]
 
     # C. Popularity fallback
     if not recommendations["CF_Recs"] and not recommendations["AR_Recs"]:
-        top_items = [p for p in popularity["ProductName"].tolist() if p not in current_basket]
-        recommendations["Popularity_Fallback"] = top_items[:3]
+        pop_candidates = [
+            {"Item": p, "Score": float(rank)}
+            for rank, p in enumerate(
+                reversed(popularity["ProductName"].tolist()), 1
+            )
+            if p not in current_basket
+        ][:20]
+        reranked_pop = _profit_rerank(pop_candidates, "Score", profit_scores, profit_weight)
+        recommendations["Popularity_Fallback"] = [r["Item"] for r in reranked_pop[:3]]
 
     return recommendations
 
@@ -189,7 +226,7 @@ def call_llm(prompt, api_key):
 
 
 # ── Bootstrap ──────────────────────────────────────────────────────────────────
-df, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity = load_data()
+df, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity, profit_scores = load_data()
 
 all_products = sorted(df["ProductName"].dropna().unique().tolist())
 known_customers = sorted(rfm.index.tolist())
@@ -241,6 +278,26 @@ with st.sidebar:
     )
 
     st.divider()
+    with st.expander("Profit optimisation"):
+        profit_weight = st.slider(
+            "Profit weight (\u03b1)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.3,
+            step=0.05,
+            help=(
+                "Controls how much product profitability influences rankings.  \n"
+                "0 = pure relevance (original behaviour).  \n"
+                "0.3 = 30% profit bias (recommended).  \n"
+                "1.0 = rank purely by margin."
+            ),
+        )
+        st.caption(
+            f"Blended score = {1-profit_weight:.0%} \u00d7 relevance + "
+            f"{profit_weight:.0%} \u00d7 profit margin"
+        )
+
+    st.divider()
     with st.expander("LLM settings (optional)"):
         openai_key = st.text_input(
             "OpenAI API key",
@@ -266,7 +323,8 @@ if not basket:
 
 # Run engine
 results = get_hybrid_recommendations(
-    customer_name, basket, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity
+    customer_name, basket, rfm, b2b_rules, b2c_rules, item_similarity_df,
+    popularity, profit_scores, profit_weight
 )
 
 is_b2b = results["Type"].startswith("B2B")
@@ -317,9 +375,14 @@ else:
                 "Items frequently bought *together* with the selected products "
                 "(based on Market Basket / Apriori analysis)."
             )
+            if profit_weight > 0:
+                st.caption(
+                    f"\U0001f4b0 Profit weight active (\u03b1={profit_weight:.0%}) — "
+                    "highly relevant *and* high-margin products are ranked first."
+                )
             for rec in results["AR_Recs"]:
                 with st.container(border=True):
-                    left, right = st.columns([5, 2])
+                    left, right = st.columns([4, 3])
                     left.markdown(
                         f"**{rec['Item']}**  \n"
                         f"*Triggered by:* `{rec['Based_On']}`"
@@ -328,6 +391,12 @@ else:
                     right.metric(
                         "Confidence", f"{rec['Confidence']:.0%}", help="Rule reliability"
                     )
+                    if profit_weight > 0 and "ProfitScore" in rec:
+                        right.metric(
+                            "Profit score",
+                            f"{rec['ProfitScore']:.2f}",
+                            help="Normalised avg margin [0\u20131]. Higher = more profitable.",
+                        )
         tab_idx += 1
 
     if has_cf:
@@ -336,16 +405,27 @@ else:
                 "Items typically purchased by **similar B2B contractors** "
                 "(based on purchase-history cosine similarity)."
             )
+            if profit_weight > 0:
+                st.caption(
+                    f"\U0001f4b0 Profit weight active (\u03b1={profit_weight:.0%}) — "
+                    "high-similarity *and* high-margin products are ranked first."
+                )
             for rec in results["CF_Recs"]:
                 with st.container(border=True):
-                    left, right = st.columns([5, 2])
+                    left, right = st.columns([4, 3])
                     left.markdown(
                         f"**{rec['Item']}**  \n"
                         f"*Similar contractors who buy* `{rec['Based_On']}` *also buy this.*"
                     )
                     right.metric(
-                        "Similarity", rec["Score"], help="Cosine similarity score (0–1)"
+                        "Similarity", rec["Score"], help="Cosine similarity score (0\u20131)"
                     )
+                    if profit_weight > 0 and "ProfitScore" in rec:
+                        right.metric(
+                            "Profit score",
+                            f"{rec['ProfitScore']:.2f}",
+                            help="Normalised avg margin [0\u20131]. Higher = more profitable.",
+                        )
         tab_idx += 1
 
     if has_pop:
