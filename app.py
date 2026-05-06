@@ -216,16 +216,6 @@ with st.sidebar:
             known_customers,
             help="Contractors recorded in the RFM database.",
         )
-        st.info(
-            "**How recommendations are made:**  \n"
-            "1. **Cross-selling (Association Rules)** — products that contractors "
-            "frequently buy *together* with items already in the basket, mined from B2B invoices.  \n"
-            "2. **Similar contractors (Collaborative Filtering)** — products bought by "
-            "other contractors with a similar purchase history, calculated using cosine similarity.  \n"
-            "3. **RFM profile** — the customer's Recency, Frequency and lifetime Monetary "
-            "value are shown so the manager can tailor the conversation.  \n"
-            "Popularity best-sellers are used only as a last resort if neither signal fires."
-        )
     elif customer_mode == "New Customer":
         typed_name = st.text_input(
             "Customer name (optional)",
@@ -234,22 +224,12 @@ with st.sidebar:
         )
         customer_name = typed_name.strip() if typed_name.strip() else "NEW_CUSTOMER"
         st.info(
-            "**How recommendations are made:**  \n"
-            "No purchase history exists for this customer yet.  \n"
-            "Recommendations are based on **B2C cross-selling rules** (products "
-            "anonymous walk-ins commonly buy together) and **store best-sellers** as a fallback."
+            "No purchase history available for this customer.  \n"
+            "Recommendations are based on **cross-selling rules** and **store best-sellers**."
         )
     else:
         customer_name = "SPRZEDAZ FISKALNA"
-        st.info(
-            "**How recommendations are made:**  \n"
-            "Anonymous cash-register transactions are grouped under a single POS entry, "
-            "so no individual purchase history is available.  \n"
-            "1. **Cross-selling (B2C Association Rules)** — products that walk-in "
-            "customers frequently buy together in the same basket.  \n"
-            "2. **Store best-sellers** — most purchased products overall, used as a "
-            "fallback when no basket-specific rules fire."
-        )
+        st.info("Anonymous POS transaction — using B2C rules only.")
 
     st.divider()
     st.subheader("Current basket")
