@@ -243,14 +243,6 @@ with st.sidebar:
         help="Type to search. Add every item the customer is currently buying.",
     )
 
-    st.divider()
-    with st.expander("LLM settings (optional)"):
-        openai_key = st.text_input(
-            "OpenAI API key",
-            type="password",
-            help="Provide a key to generate a GPT-4o-mini manager explanation.",
-        )
-
     if item_similarity_df.empty:
         st.warning(
             "Item similarity matrix not found.  \nRun **notebook 2** to generate it.  \n"
@@ -296,7 +288,7 @@ if is_b2b and results["RFM_Profile"]:
 st.divider()
 st.subheader("AI Manager Summary")
 
-key_to_use = openai_key or os.environ.get("OPENAI_API_KEY", "")
+key_to_use = os.environ.get("OPENAI_API_KEY", "")
 prompt = generate_llm_prompt(results)
 
 if key_to_use:
