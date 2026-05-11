@@ -19,6 +19,11 @@ master/
 ├── 1. Data Preprocessing & EDA.ipynb     # Data cleaning, EDA, feature engineering, RFM, K-Means
 ├── 2. Recommendation Models.ipynb        # Popularity baseline, Item-CF, Association Rules + Evaluation
 ├── 3. Final Model.ipynb                  # Hybrid model + LLM explanation layer
+├── 4. Streamlit Demo App.ipynb           # Installs deps, verifies data files, launches app.py
+├── app.py                                # Streamlit interactive demo application
+├── .env                                  # API key storage (not committed to Git)
+├── .gitignore
+├── requirements.txt                      # Package list
 ├── data/
 │   ├── raw/                              # Original POS exports (2022–2025, B1 & B2 half-years)
 │   │   ├── 1-2022.csv
@@ -35,7 +40,6 @@ master/
 │       ├── item_similarity_matrix.pkl
 │       └── model_evaluation_results.csv
 ├── plots/                                # All saved EDA & model visualisations
-├── requirenments.py                      # Package list
 └── README.md
 ```
 
@@ -55,9 +59,10 @@ The project follows the **Design Science Research (DSR)** framework and implemen
 | 6 | LLM-based natural-language explanation generation |
 
 ### Customer Split
-The dataset distinguishes between two customer types:
-- **B2B** — known contractors identified by name (used in Item-Based Collaborative Filtering + Association Rules + RFM segmentation)
-- **B2C** — anonymous walk-in customers recorded as `SPRZEDAZ FISKALNA` (Association Rules + popularity fallback only)
+The dataset distinguishes between three customer types in the app:
+- **B2B** — known contractors identified by name (Item-Based Collaborative Filtering + Association Rules + RFM segmentation)
+- **B2C** — anonymous walk-in customers recorded as `SPRZEDAZ FISKALNA` (B2C Association Rules + popularity fallback only)
+- **New Customer** — first-time visitor with no purchase history (treated identically to B2C; manager can optionally enter a name)
 
 ---
 
@@ -84,11 +89,18 @@ The dataset distinguishes between two customer types:
 ### 3. Hybrid Model + LLM Layer (`Notebook 3`)
 - **Three-tier recommendation logic:**
   1. Item-Based CF (B2B only)
-  2. Association Rules (B2B uses B2B rules; B2C uses B2C rules)
+  2. Association Rules (B2B uses B2B rules; B2C and New Customers use B2C rules)
   3. Popularity fallback (when no signals are found)
 - Items already in the basket are excluded from all recommendation lists
 - **RFM Profile** injected into the LLM prompt (days since last purchase, invoice count, lifetime spend, segment label)
 - **LLM integration** — calls `gpt-4o-mini` via the OpenAI API to convert the recommendation dict into a plain-language explanation for the floor manager; gracefully falls back to printing the prompt if no API key is available
+
+### 4. Streamlit Demo App (`app.py` + `Notebook 4`)
+- Interactive web application for real-time recommendation demonstration
+- **Sidebar:** customer type selector (B2B / B2C / New Customer), product basket builder
+- **Main panel:** customer header with RFM metrics (B2B), AI Manager Summary (GPT-4o-mini explanation), recommendation tabs (Market Basket · Similar Contractors · Store Best-Sellers)
+- API key loaded automatically from `.env` via `python-dotenv`
+- `Notebook 4` installs dependencies, verifies data files, runs a smoke-test, and launches the app
 
 ---
 
@@ -97,20 +109,24 @@ The dataset distinguishes between two customer types:
 ### 1. Install Dependencies
 
 ```bash
-pip install pandas numpy scikit-learn mlxtend seaborn matplotlib openai
+pip install -r requirements.txt
+```
+
+Or manually:
+
+```bash
+pip install pandas numpy scikit-learn mlxtend seaborn matplotlib openai streamlit python-dotenv
 ```
 
 ### 2. Set OpenAI API Key (for the LLM layer)
 
-```powershell
-# PowerShell
-$env:OPENAI_API_KEY = "sk-..."
+Open the `.env` file in the `master/` folder and replace the placeholder with your real key:
+
+```
+OPENAI_API_KEY=sk-your-actual-key-here
 ```
 
-```bash
-# bash / zsh
-export OPENAI_API_KEY="sk-..."
-```
+The app loads this automatically on startup via `python-dotenv`. The `.env` file is listed in `.gitignore` and will never be committed to Git.
 
 ### 3. Run the Notebooks in Order
 
@@ -118,6 +134,14 @@ export OPENAI_API_KEY="sk-..."
 1. Data Preprocessing & EDA.ipynb   →  generates preprocessed/ artefacts
 2. Recommendation Models.ipynb      →  trains models, exports rules & similarity matrix, runs evaluation
 3. Final Model.ipynb                →  hybrid recommendations + LLM explanations
+4. Streamlit Demo App.ipynb         →  installs deps, verifies files, launches app.py
+```
+
+Alternatively, launch the app directly from the terminal:
+
+```bash
+cd master
+streamlit run app.py
 ```
 
 > **Note:** The raw POS data files in `data/raw/` are not included in this repository as they contain confidential business information. The notebooks expect 8 CSV files named `{half}-{year}.csv` (e.g. `1-2022.csv`, `2-2023.csv`) inside `data/raw/`.
@@ -133,6 +157,8 @@ export OPENAI_API_KEY="sk-..."
 | `mlxtend` | Apriori algorithm & association rule generation |
 | `seaborn` / `matplotlib` | Visualisations |
 | `openai` | GPT-4o-mini API calls for natural-language explanations |
+| `streamlit` | Interactive demo web application |
+| `python-dotenv` | Loads API key from `.env` file |
 
 ---
 

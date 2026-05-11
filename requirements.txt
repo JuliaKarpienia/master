@@ -5,3 +5,5 @@ mlxtend
 seaborn
 matplotlib
 openai
+streamlit
+python-dotenv
