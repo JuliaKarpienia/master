@@ -112,12 +112,6 @@ The dataset distinguishes between three customer types in the app:
 pip install -r requirements.txt
 ```
 
-Or manually:
-
-```bash
-pip install pandas numpy scikit-learn mlxtend seaborn matplotlib openai streamlit python-dotenv
-```
-
 ### 2. Set OpenAI API Key (for the LLM layer)
 
 Open the `.env` file in the `master/` folder and replace the placeholder with your real key:
