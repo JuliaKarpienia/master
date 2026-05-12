@@ -137,28 +137,7 @@ The app loads this automatically on startup via `python-dotenv`. The `.env` file
 4. Streamlit Demo App.ipynb         →  installs deps, verifies files, launches app.py
 ```
 
-Alternatively, launch the app directly from the terminal:
-
-```bash
-cd master
-streamlit run app.py
-```
-
 > **Note:** The raw POS data files in `data/raw/` are not included in this repository as they contain confidential business information. The notebooks expect 8 CSV files named `{half}-{year}.csv` (e.g. `1-2022.csv`, `2-2023.csv`) inside `data/raw/`.
-
----
-
-## Key Technologies
-
-| Library | Purpose |
-|---|---|
-| `pandas` / `numpy` | Data manipulation & matrix operations |
-| `scikit-learn` | Cosine similarity, K-Means, StandardScaler |
-| `mlxtend` | Apriori algorithm & association rule generation |
-| `seaborn` / `matplotlib` | Visualisations |
-| `openai` | GPT-4o-mini API calls for natural-language explanations |
-| `streamlit` | Interactive demo web application |
-| `python-dotenv` | Loads API key from `.env` file |
 
 ---
 
