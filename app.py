@@ -167,10 +167,14 @@ def generate_llm_prompt(hybrid_output):
         )
 
     prompt += (
-        "\nTask: Write a 2-3 sentence summary for the floor manager. "
-        "Explain exactly WHAT to recommend to this customer and WHY, "
-        "without using jargon like 'Collaborative Filtering' or 'Statistical Lift'. "
-        "Focus on practical business logic."
+        "\nTask: Write a short, structured summary for the floor manager using this format:\n"
+        "1. Start with a one-sentence **Customer Context** line about who this customer is "
+        "and their purchase status.\n"
+        "2. Then list each recommended product as a separate bullet point, with the product "
+        "name in bold and a brief reason why.\n"
+        "3. End with a one-sentence **Action** line summarising the goal.\n\n"
+        "Use plain business language — no jargon like 'Collaborative Filtering' or "
+        "'Statistical Lift'. Use markdown formatting."
     )
     return prompt
 
@@ -295,7 +299,7 @@ if key_to_use:
     if st.button("Generate explanation", type="primary"):
         with st.spinner("Calling GPT-4o-mini…"):
             explanation = call_llm(prompt, key_to_use)
-        st.success(explanation)
+        st.markdown(explanation)
 else:
     st.info(
         "Enter an OpenAI API key in **LLM settings** (sidebar) or add it to the `.env` file "
