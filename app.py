@@ -6,9 +6,6 @@ Run with:  streamlit run app.py
 import os
 import streamlit as st
 import pandas as pd
-from dotenv import load_dotenv
-
-load_dotenv()  # loads OPENAI_API_KEY from .env if present
 
 # ── Page configuration ─────────────────────────────────────────────────────────
 st.set_page_config(
@@ -179,13 +176,16 @@ def generate_llm_prompt(hybrid_output):
     return prompt
 
 
-def call_llm(prompt, api_key):
+def call_llm(prompt):
     try:
         from openai import OpenAI  # noqa: PLC0415
 
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(
+            base_url="http://localhost:11434/v1",
+            api_key="ollama",
+        )
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="mistral",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=300,
@@ -256,7 +256,7 @@ with st.sidebar:
 # ── Main ───────────────────────────────────────────────────────────────────────
 st.title("Retail Recommendation Engine")
 st.caption(
-    "Hybrid system: Collaborative Filtering · Association Rules · Popularity Fallback · GPT-4o-mini"
+    "Hybrid system: Collaborative Filtering · Association Rules · Popularity Fallback · Local LLM (Ollama)"
 )
 
 if not basket:
@@ -292,19 +292,12 @@ if is_b2b and results["RFM_Profile"]:
 st.divider()
 st.subheader("AI Manager Summary")
 
-key_to_use = os.environ.get("OPENAI_API_KEY", "")
 prompt = generate_llm_prompt(results)
 
-if key_to_use:
-    if st.button("Generate explanation", type="primary"):
-        with st.spinner("Calling GPT-4o-mini…"):
-            explanation = call_llm(prompt, key_to_use)
-        st.markdown(explanation)
-else:
-    st.info(
-        "Enter an OpenAI API key in **LLM settings** (sidebar) or add it to the `.env` file "
-        "to generate a plain-English recommendation summary for the floor manager."
-    )
+if st.button("Generate explanation", type="primary"):
+    with st.spinner("Calling local LLM (Ollama)…"):
+        explanation = call_llm(prompt)
+    st.markdown(explanation)
 
 with st.expander("View raw LLM prompt"):
     st.code(prompt, language="text")
