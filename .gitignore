@@ -3,4 +3,4 @@ data/preprocessed/*.pkl
 __pycache__/
 .venv/
 .env
-
+data

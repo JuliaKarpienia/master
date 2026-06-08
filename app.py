@@ -18,7 +18,7 @@ st.set_page_config(
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "preprocessed")
 
 
-# ── Data loading (cached) ──────────────────────────────────────────────────────
+# Data loading 
 @st.cache_data
 def load_data():
     df = pd.read_csv(os.path.join(DATA_DIR, "cleaned_retail_data_2022_2025.csv"))
@@ -42,7 +42,7 @@ def load_data():
     return df, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity
 
 
-# ── Recommendation engine ──────────────────────────────────────────────────────
+#  Recommendation engine 
 def get_hybrid_recommendations(
     customer_name, current_basket, rfm, b2b_rules, b2c_rules, item_similarity_df, popularity
 ):
@@ -117,7 +117,7 @@ def get_hybrid_recommendations(
     return recommendations
 
 
-# ── LLM helpers ────────────────────────────────────────────────────────────────
+# LLM helpers 
 def generate_llm_prompt(hybrid_output):
     rfm_profile = hybrid_output.get("RFM_Profile", {})
     rfm_context = ""
@@ -178,7 +178,7 @@ def generate_llm_prompt(hybrid_output):
 
 def call_llm(prompt):
     try:
-        from openai import OpenAI  # noqa: PLC0415
+        from openai import OpenAI  
 
         client = OpenAI(
             base_url="http://localhost:11434/v1",
@@ -191,7 +191,7 @@ def call_llm(prompt):
             max_tokens=300,
         )
         return response.choices[0].message.content
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  
         return f"LLM call failed: {exc}"
 
 
