@@ -93,13 +93,13 @@ The dataset distinguishes between three customer types in the app:
   3. Popularity fallback (when no signals are found)
 - Items already in the basket are excluded from all recommendation lists
 - **RFM Profile** injected into the LLM prompt (days since last purchase, invoice count, lifetime spend, segment label)
-- **LLM integration** — calls `gpt-4o-mini` via the OpenAI API to convert the recommendation dict into a plain-language explanation for the floor manager; gracefully falls back to printing the prompt if no API key is available
+- **LLM integration** — calls the Mistral model locally via Ollama to convert the recommendation dict into a plain-language explanation for the floor manager; gracefully falls back to printing the prompt if the local Ollama server is unavailable
 
 ### 4. Streamlit Demo App (`app.py` + `Notebook 4`)
 - Interactive web application for real-time recommendation demonstration
 - **Sidebar:** customer type selector (B2B / B2C / New Customer), product basket builder
-- **Main panel:** customer header with RFM metrics (B2B), AI Manager Summary (GPT-4o-mini explanation), recommendation tabs (Market Basket · Similar Contractors · Store Best-Sellers)
-- API key loaded automatically from `.env` via `python-dotenv`
+- **Main panel:** customer header with RFM metrics (B2B), AI Manager Summary (Mistral via Ollama explanation), recommendation tabs (Market Basket · Similar Contractors · Store Best-Sellers)
+- Ollama must be running locally (`http://localhost:11434`)
 - `Notebook 4` installs dependencies, verifies data files, runs a smoke-test, and launches the app
 
 ---
@@ -112,15 +112,15 @@ The dataset distinguishes between three customer types in the app:
 pip install -r requirements.txt
 ```
 
-### 2. Set OpenAI API Key (for the LLM layer)
+### 2. Start Ollama (for the LLM layer)
 
-Open the `.env` file in the `master/` folder and replace the placeholder with your real key:
+Install [Ollama](https://ollama.com/) and pull the Mistral model:
 
+```bash
+ollama pull mistral
 ```
-OPENAI_API_KEY=sk-your-actual-key-here
-```
 
-The app loads this automatically on startup via `python-dotenv`. The `.env` file is listed in `.gitignore` and will never be committed to Git.
+Ensure Ollama is running before launching the app. The app connects to `http://localhost:11434/v1`.
 
 ### 3. Run the Notebooks in Order
 
