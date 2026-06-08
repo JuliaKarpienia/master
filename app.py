@@ -165,13 +165,16 @@ def generate_llm_prompt(hybrid_output):
 
     prompt += (
         "\nTask: Write a short, structured summary for the floor manager using this format:\n"
-        "1. Start with a one-sentence **Customer Context** line about who this customer is "
-        "and their purchase status.\n"
-        "2. Then list each recommended product as a separate bullet point, with the product "
-        "name in bold and a brief reason why.\n"
-        "3. End with a one-sentence **Action** line summarising the goal.\n\n"
-        "Use plain business language — no jargon like 'Collaborative Filtering' or "
-        "'Statistical Lift'. Use markdown formatting."
+        "1. One sentence about who this customer is.\n"
+        "2. A short bullet list of recommended products — each bullet has the "
+        "product name in **bold** and a simple one-line reason (e.g. 'often bought together with X').\n"
+        "3. One sentence telling the manager what to do next.\n\n"
+        "RULES:\n"
+        "- Keep the ENTIRE response under 150 words.\n"
+        "- Use simple, everyday language a shop assistant would understand.\n"
+        "- Do NOT mention numbers, scores, statistics, percentages, or technical terms.\n"
+        "- Do NOT explain how the recommendations were generated.\n"
+        "- Use markdown formatting."
     )
     return prompt
 
@@ -188,7 +191,7 @@ def call_llm(prompt):
             model="mistral",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=300,
+            max_tokens=400,
         )
         return response.choices[0].message.content
     except Exception as exc:  
