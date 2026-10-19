@@ -1,6 +1,10 @@
-data/preprocessed/*.pkl
+data/raw/
+data/preprocessed/
+evaluation_private/
+*.pkl
+*.joblib
+*.parquet
+.env
 .ipynb_checkpoints/
 __pycache__/
-.venv/
-.env
-data
+.DS_Store
